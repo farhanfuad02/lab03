@@ -4,9 +4,10 @@ const db = require('../../config/db');
 
 // GET all tasks
 // GET all tasks with pagination
+// GET all tasks with pagination and search
 router.get('/', async (req, res) => {
   try {
-    let { page, limit } = req.query;
+    let { page, limit, q } = req.query;
 
     // Set defaults and parse to integers
     page = parseInt(page) || 1;
@@ -18,13 +19,30 @@ router.get('/', async (req, res) => {
     // Calculate offset
     const offset = (page - 1) * limit;
 
+    // Base queries
+    let countSql = 'SELECT COUNT(*) as count FROM tasks';
+    let dataSql = 'SELECT * FROM tasks';
+    const params = [];
+
+    // Add search filter if 'q' is provided
+    if (q) {
+      const searchClause = ' WHERE title LIKE ?';
+      countSql += searchClause;
+      dataSql += searchClause;
+      params.push(`%${q}%`);
+    }
+
+    // Add ordering and pagination to data query
+    dataSql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+
     // Get total count
-    const [countResult] = await db.query('SELECT COUNT(*) as count FROM tasks');
+    const [countResult] = await db.query(countSql, q ? [`%${q}%`] : []);
     const totalTasks = countResult[0].count;
     const totalPages = Math.ceil(totalTasks / limit);
 
     // Get paginated data
-    const [rows] = await db.query('SELECT * FROM tasks ORDER BY created_at DESC LIMIT ? OFFSET ?', [limit, offset]);
+    const queryParams = [...params, limit, offset];
+    const [rows] = await db.query(dataSql, queryParams);
 
     res.json({
       totalTasks,
