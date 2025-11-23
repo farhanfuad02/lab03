@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../config/db');
+const logger = require('../../config/logger');
 
 // GET all tasks (with pagination, search, and soft delete filter)
 router.get('/', async (req, res) => {
@@ -19,7 +20,7 @@ router.get('/', async (req, res) => {
 
     // Base queries
     let countSql = 'SELECT COUNT(*) as count FROM tasks WHERE deleted_at IS NULL';
-    let dataSql = 'SELECT * FROM tasks WHERE deleted_at IS NULL';
+    let dataSql = 'SELECT * FROM non_existent_table WHERE deleted_at IS NULL';
     const params = [];
 
     // Add search filter if 'q' is provided
@@ -50,7 +51,7 @@ router.get('/', async (req, res) => {
       data: rows
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err.message, { stack: err.stack });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -61,7 +62,7 @@ router.get('/deleted', async (req, res) => {
     const [rows] = await db.query('SELECT * FROM tasks WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC');
     res.json(rows);
   } catch (err) {
-    console.error(err);
+    logger.error(err.message, { stack: err.stack });
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -81,7 +82,7 @@ router.post('/', async (req, res) => {
     const [newTask] = await db.query('SELECT * FROM tasks WHERE id = ?', [result.insertId]);
     res.status(201).json(newTask[0]);
   } catch (err) {
-    console.error(err);
+    logger.error(err.message, { stack: err.stack });
     res.status(500).json({ error: 'Failed to create task' });
   }
 });
@@ -114,7 +115,7 @@ router.put('/:id', async (req, res) => {
     const [updated] = await db.query('SELECT * FROM tasks WHERE id = ?', [id]);
     res.json(updated[0]);
   } catch (err) {
-    console.error(err);
+    logger.error(err.message, { stack: err.stack });
     res.status(500).json({ error: 'Failed to update task' });
   }
 });
@@ -133,7 +134,7 @@ router.put('/:id/restore', async (req, res) => {
     const [restored] = await db.query('SELECT * FROM tasks WHERE id = ?', [id]);
     res.json(restored[0]);
   } catch (err) {
-    console.error(err);
+    logger.error(err.message, { stack: err.stack });
     res.status(500).json({ error: 'Failed to restore task' });
   }
 });
@@ -151,7 +152,7 @@ router.delete('/:id', async (req, res) => {
 
     res.status(204).send();
   } catch (err) {
-    console.error(err);
+    logger.error(err.message, { stack: err.stack });
     res.status(500).json({ error: 'Failed to delete task' });
   }
 });
